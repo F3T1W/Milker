@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="Milker.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Milker"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Border x:Name="AppTitleBar" Grid.Column="1" VerticalAlignment="Top">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Image Source="Assets\icon.ico" Height="16" Width="16" Margin="15,5,20,0" VerticalAlignment="Center" Grid.Column="0" />
+            <TextBlock x:Name="MilkerTitle" Text="Milker" VerticalAlignment="Center" Grid.Column="1" />
+        </Grid>
+    </Border>
+</Window>

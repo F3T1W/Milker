@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Milker (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "Milker (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
