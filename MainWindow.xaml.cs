@@ -33,7 +33,12 @@ namespace Milker
 
         public TextBlock GetMilker()
         {
-            return this.MilkerTitle;
+            return MilkerTitle;
+        }
+
+        private void DownloadButton_Click(object sender, RoutedEventArgs e)
+        {
+
         }
     }
 }
