@@ -12,7 +12,7 @@ const createWindow = () => {
 
   mainWindow.loadFile('index.html')
 
-  // Open the DevTools.
+  mainWindow.maximize();
   // mainWindow.webContents.openDevTools()
 }
 

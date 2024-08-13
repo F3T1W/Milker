@@ -1,0 +1,129 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    min-height: 100vh;
+    background: #0c192c;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Arial', sans-serif;
+    color: #ffffff;
+}
+
+.input-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.input-container input {
+    padding: 10px;
+    padding-left: 20px;
+    font-size: 18px;
+    border: 2px solid #4fc3dc;
+    border-radius: 10px;
+    margin-bottom: 25px;
+    background-color: #ffffff;
+    color: #0c192c;
+    outline: none;
+    transition: border-color 0.3s ease;
+    width: 100vh;
+    height: 6vh;
+}
+
+.input-container input:focus {
+    border-color: #ff2d75;
+}
+
+.input-container button {
+    padding: 10px 20px;
+    font-size: 18px;
+    border: none;
+    background-color: #4fc3dc;
+    color: #ffffff;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.input-container button:hover {
+    background-color: #3ba2b8;
+    transform: scale(1.05);
+}
+
+.input-container button:active {
+    background-color: #337e8a;
+    transform: scale(1.02);
+}
+
+.container {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.bubbles {
+    position: relative;
+    display: flex;
+    z-index: -100;
+}
+
+.bubbles span {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    background: #4fc3dc;
+    margin: 0 4px;
+    border-radius: 50%;
+    box-shadow: 0 0 0 10px #4fc3dc44,
+    0 0 50px #4fc3dc,
+    0 0 100px #4fc3dc;
+    animation: animate 15s linear infinite;
+    animation-duration: calc(125s / var(--i));
+}
+
+.bubbles span:nth-child(even) {
+    background: #ff2d75;
+    box-shadow: 0 0 0 10px #ff2d7544,
+    0 0 50px #4fc3dc,
+    0 0 100px #4fc3dc;
+}
+
+.text-area {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+}
+
+.vertical-center {
+    margin: 0;
+    position: absolute;
+    top: 44%;
+    -ms-transform: translateY(-44%);
+    transform: translateY(-44%);
+}
+
+.horizontal-center {
+    margin: 0;
+    position: absolute;
+    left: 50%;
+    -ms-transform: translateX(-50%);
+    transform: translateX(-50%);
+}
+
+@keyframes animate {
+    0%
+    {
+        transform: translateY(100vh) scale(0);
+    }
+    100%
+    {
+        transform: translateY(-10vh) scale(1);
+    }
+}
