@@ -3,15 +3,14 @@ const express = require('express');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-const cheerio = require('cheerio');
+const puppeteer = require('puppeteer');
 
-// Globals
-let globalPatreonUrl = '';  // Global variable to store the Patreon creator URL
+let globalPatreonUrl = '';
 
-const clientId = 'putYourClientId';
-const clientSecret = 'putYourClientSecret';
-const redirectUri = 'putYourRedirectUri';
-const authUrl = `putYourAuthUrl`;
+const clientId = 'aHG0LuyuP5nXfUp5K4f9CeJ8uZnrhN1DACEgCjxvQlaGUWmvgQaGADDpSBJUWARM';
+const clientSecret = 'NP6j86OCXPDjbOV1UEg2FiWm2f5WNPlRolT3hDqOWk73t2nNoIc_4kXokJKe53tc';
+const redirectUri = 'http://localhost:3000/callback';
+const authUrl = `https://www.patreon.com/oauth2/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=identity%20campaigns.posts`;
 
 function createWindow() {
     const mainWindow = new BrowserWindow({
@@ -50,17 +49,7 @@ function startServer() {
 
         const accessToken = await exchangeCodeForToken(authCode);
         if (accessToken) {
-            const campaignId = await getCampaignIdFromPatreon(globalPatreonUrl, accessToken);  // Use the globalPatreonUrl
-            if (campaignId) {
-                const posts = await fetchCreatorPosts(accessToken, campaignId);
-                const images = filterAccessibleImages(posts);
-
-                if (images.length > 0) {
-                    await downloadImages(images);
-                } else {
-                    console.log('No images found for download.');
-                }
-            }
+            downloadContent(accessToken);
         }
     });
 
@@ -69,9 +58,9 @@ function startServer() {
     });
 }
 
-ipcMain.on('download-content', async (event, url) => {
-    console.log(`Received URL: ${url}`);
-    globalPatreonUrl = url;  // Store the creator URL globally
+ipcMain.on('download-content', async (event, creatorName) => {
+    console.log(`Received creator name: ${creatorName}`);
+    globalPatreonUrl = `https://www.patreon.com/${creatorName}`;
     shell.openExternal(authUrl);
 });
 
@@ -107,94 +96,49 @@ async function exchangeCodeForToken(authCode) {
     }
 }
 
-async function getCampaignIdFromPatreon(creatorUrl, accessToken) {
-  try {
-      const response = await axios.get(creatorUrl, {
-          headers: {
-              Authorization: `Bearer ${accessToken}`
-          }
-      });
+async function downloadContent(accessToken) {
+    const { browser, page } = await startBrowser();
 
-      // Attempt to extract the campaign ID using a regex pattern
-      const campaignIdMatch = response.data.match(/\/campaign\/(\d+)\//);
-      let campaignId = null;
+    // Navigate to the creator's posts page and intercept API responses
+    await page.goto(globalPatreonUrl + '/posts', { waitUntil: 'networkidle2' });
 
-      if (campaignIdMatch && campaignIdMatch[1]) {
-          campaignId = campaignIdMatch[1];
-          console.log(`Campaign ID found: ${campaignId}`);
-      } else {
-          console.error('Campaign ID not found in the page.');
-      }
+    page.on('response', async (response) => {
+        if (response.url().includes('https://www.patreon.com/api/posts')) {
+            const json = await response.json();
+            const posts = json.data;
 
-      return campaignId;
-  } catch (error) {
-      console.error('Error fetching campaign ID:', error.response ? error.response.data : error.message);
-      return null;
-  }
-}
+            // Ensure the directory exists
+            const downloadDir = path.join(__dirname, 'jija');
+            if (!fs.existsSync(downloadDir)) {
+                fs.mkdirSync(downloadDir);
+            }
 
-async function fetchCreatorPosts(accessToken, campaignId) {
-  try {
-      const endpoint = `https://www.patreon.com/api/oauth2/v2/campaigns/${campaignId}/posts`;
-
-      const queryString = new URLSearchParams({
-          'fields[post]': 'title,content,url'
-      }).toString();
-
-      const response = await axios.get(`${endpoint}?${queryString}`, {
-          headers: {
-              Authorization: `Bearer ${accessToken}`
-          }
-      });
-
-      const posts = response.data.data;
-      console.log('Fetched Posts:', posts);
-
-      return posts;
-  } catch (error) {
-      console.error('Error fetching posts:', error.response ? error.response.data : error.message);
-      return null;
-  }
-}
-
-function filterAccessibleImages(posts) {
-    const images = [];
-
-    posts.forEach(post => {
-        if (post.attributes.image) {
-            images.push(post.attributes.image.url);
-        }
-
-        if (post.relationships.media) {
-            post.relationships.media.data.forEach(mediaItem => {
-                if (mediaItem.attributes.download_url) {
-                    images.push(mediaItem.attributes.download_url);
+            // Download images from each post
+            for (const post of posts) {
+                const imgUrl = post.attributes.image?.url || post.attributes.post_file?.url;
+                if (imgUrl) {
+                    downloadImage(imgUrl, downloadDir);
                 }
-            });
+            }
         }
     });
 
-    return images;
+    await browser.close();
 }
 
-async function downloadImages(images) {
-    const downloadsPath = path.join(__dirname, 'downloads');
+async function startBrowser() {
+    const browser = await puppeteer.launch({ headless: false, userDataDir: './chromedata' });
+    const page = await browser.newPage();
+    return { browser, page };
+}
 
-    if (!fs.existsSync(downloadsPath)) {
-        fs.mkdirSync(downloadsPath);
-    }
-
-    for (const url of images) {
-        const fileName = path.basename(url);
-        const filePath = path.join(downloadsPath, fileName);
-
-        const writer = fs.createWriteStream(filePath);
-
+async function downloadImage(url, directory) {
+    try {
         const response = await axios.get(url, { responseType: 'stream' });
-
-        response.data.pipe(writer);
-
-        writer.on('finish', () => console.log(`Downloaded: ${fileName}`));
-        writer.on('error', (err) => console.error(`Error downloading ${fileName}:`, err));
+        const filePath = path.join(directory, path.basename(url));
+        response.data.pipe(fs.createWriteStream(filePath));
+        console.log(`Downloaded: ${filePath}`);
+    } catch (error) {
+        console.error('Error downloading image:', error.message);
     }
 }
