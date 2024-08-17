@@ -9,9 +9,9 @@ function createWindow() {
         width: 800,
         height: 600,
         webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),  // Файл preload.js для взаимодействия между main и renderer процессами
-            nodeIntegration: false,  // Включаем контекстную изоляцию
-            contextIsolation: true,  // Включаем защиту от контекста
+            preload: path.join(__dirname, 'preload.js'),
+            nodeIntegration: false,
+            contextIsolation: true,
         },
     });
 
@@ -43,23 +43,32 @@ async function loginAndDownload(username) {
             '--disable-setuid-sandbox',
             '--disable-blink-features=AutomationControlled'
         ],
-        timeout: 0  // Отключаем общий таймаут для браузера
+        timeout: 0
     });
     const page = await browser.newPage();
 
-    // Отключение детектирования Puppeteer
     await page.evaluateOnNewDocument(() => {
         Object.defineProperty(navigator, 'webdriver', {
             get: () => false,
         });
     });
 
-    // Установка пользовательского агента
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
 
     try {
         console.log('Загружаю страницу крейтора');
         await page.goto(`https://www.patreon.com/${username}`, { timeout: 0 });
+
+        let loadMoreVisible = true;
+        while (loadMoreVisible) {
+            await page.evaluate(() => {
+                window.scrollBy(0, window.innerHeight);
+            });
+
+            loadMoreVisible = await clickSeeMorePosts(page);
+
+            await new Promise(resolve => setTimeout(resolve, 3000));
+        }
 
         console.log('Загрузка завершена, собираю ссылки...');
         
@@ -68,15 +77,13 @@ async function loginAndDownload(username) {
             return images.map(img => img.src);
         });
 
-        console.log(imageLinks);
+        console.log(`Найдено изображений: ${imageLinks.length}`);
 
-        // Проверяем, существует ли папка 'download'. Если нет, создаем её.
         const downloadPath = path.join(__dirname, 'download');
         if (!fs.existsSync(downloadPath)) {
             fs.mkdirSync(downloadPath);
         }
 
-        // Загружаем каждое изображение
         for (const [index, url] of imageLinks.entries()) {
             const imagePath = path.join(downloadPath, `image_${index}.jpg`);
             await downloadImage(url, imagePath);
@@ -88,6 +95,33 @@ async function loginAndDownload(username) {
         console.error('Произошла ошибка во время навигации:', error);
     } finally {
         await browser.close();
+    }
+}
+
+async function clickSeeMorePosts(page) {
+    const buttonXPath = "//div[contains(text(), 'See more posts')]";
+
+    try {
+        const buttonExists = await page.evaluate((buttonXPath) => {
+            const elements = document.evaluate(buttonXPath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+            const element = elements.singleNodeValue;
+            if (element) {
+                element.click();
+                return true;
+            }
+            return false;
+        }, buttonXPath);
+
+        if (buttonExists) {
+            console.log('Нажимаем на кнопку "See more posts"');
+            return true;
+        } else {
+            console.log('Кнопка не найдена');
+            return false;
+        }
+    } catch (error) {
+        console.error('Ошибка при поиске или нажатии на кнопку:', error);
+        return false;
     }
 }
 
