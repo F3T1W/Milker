@@ -37,7 +37,7 @@ ipcMain.on('download-content', async (event, creatorName) => {
 
 async function loginAndDownload(username) {
     const browser = await puppeteer.launch({
-        headless: false,
+        headless: true,
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
